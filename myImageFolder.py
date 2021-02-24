@@ -1,6 +1,7 @@
 from torchvision import datasets
 import pandas as pd
 import os
+from pathlib import Path
 
 class MyImageFolder(datasets.ImageFolder):
     def __init__(self, root, transform=None, target_transform=None):
@@ -11,8 +12,7 @@ class MyImageFolder(datasets.ImageFolder):
         defect_details = pd.DataFrame(columns=['label', 'defect_1', 'defect_2', 'shape', 'x_1', 'y_1', 'x_2', 'y_2'])
         for defect in self.classes:
             if defect in ['chipping', 'lead_defect', 'foreign_material', 'pocket_damge', 'lead_glue', 'marking_defect', 'scratch']:
-                file_name = os.path.join('/home/kaiyihuang/nexperia/new_data/20191129_Labeled_Image', defect,
-                                         'ImageLabel.csv')
+                file_name = os.path.join(Path.cwd(), 'files', defect+'.csv')
                 table = pd.read_csv(file_name, names=['label', 'defect_2', 'shape', 'x_1', 'y_1', 'x_2', 'y_2'])
                 table['defect_1'] = defect
                 defect_details = defect_details.append(table)

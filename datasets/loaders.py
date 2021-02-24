@@ -39,9 +39,9 @@ def get_loader(args, data_aug=True):
         dataloader = torch.utils.data.DataLoader(combined_dataset, batch_size=args.batch_size,
                                              shuffle=True, num_workers=4)
         
-        return dataloader, 10, np.load('/home/kaiyihuang/nexperia/targets.npy')
+        return dataloader, 10, np.load('files/targets.npy')
     
-    elif args.dataset =='nexperia_split':
+    elif args.dataset=='nexperia_split':
         data_transforms = {
             'train': tform_train,
             'val': tform_test,
@@ -56,7 +56,29 @@ def get_loader(args, data_aug=True):
                                              shuffle=True, num_workers=4)
               for x in ['train', 'val', 'test']}
         
-        return dataloaders['train'], dataloaders['val'], dataloaders['test'], 10, np.load('/home/kaiyihuang/nexperia/targets.npy')
+        return dataloaders['train'], dataloaders['val'], dataloaders['test'], 10, np.load('files/targets.npy')
+    
+    elif args.dataset=='nexperia_merge':
+        data_transforms = {
+            'train': tform_train,
+            'val': tform_test,
+            'test': tform_test
+        }
+        
+        image_datasets_1 = {x: MyImageFolder(os.path.join(args.data_root_1, x),
+                                          data_transforms[x])
+                  for x in ['train', 'val', 'test']}
+        image_datasets_2 = {x: MyImageFolder(os.path.join(args.data_root_2, x),
+                                          data_transforms[x])
+                  for x in ['train', 'val', 'test']}
+        image_datasets = {x: ConcatDataset((image_datasets_1[x], image_datasets_2[x]))
+                 for x in ['train', 'val', 'test']}
+                
+        dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=args.batch_size,
+                                             shuffle=True, num_workers=4)
+              for x in ['train', 'val', 'test']}
+        
+        return dataloaders['train'], dataloaders['val'], dataloaders['test'], 10, np.load('files/targets.npy')
     
     else:
         raise ValueError("Dataset `{}` is not supported yet.".format(args.dataset))

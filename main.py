@@ -30,6 +30,10 @@ parser.add_argument('--base-width', default=64, type=int,
 # training setting
 parser.add_argument('--data-root', help='The directory of data',
                     default='~/datasets/CIFAR10', type=str)
+parser.add_argument('--data-root-1', help='The directory of data',
+                    default='~/datasets/CIFAR10', type=str)
+parser.add_argument('--data-root-2', help='The directory of data',
+                    default='~/datasets/CIFAR10', type=str)
 parser.add_argument('--dataset', help='dataset used to training',
                     default='cifar10', type=str)
 parser.add_argument('--train-sets', help='subsets (train/trainval) that used to training',
@@ -463,7 +467,7 @@ def train(train_loader, model, criterion, optimizer, epoch, timeline, es, datase
             binary_margin_error.update(margin_error_bi.item(), input.size(0))
 
             # measure auc
-            auc_meter.update(target.detach().to('cpu'), probs.detach().to('cpu'), image_id)
+            auc_meter.update(target.detach().to('cpu'), probs.detach().to('cpu'))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -527,7 +531,7 @@ def train(train_loader, model, criterion, optimizer, epoch, timeline, es, datase
             binary_margin_error.update(margin_error_bi.item(), input.size(0))
 
             # measure auc
-            auc_meter.update(target.detach().to('cpu'), probs.detach().to('cpu'), image_id)
+            auc_meter.update(target.detach(), probs.detach())
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -548,7 +552,6 @@ def train(train_loader, model, criterion, optimizer, epoch, timeline, es, datase
                           epoch+1, i+1, len(train_loader), lr=lr, batch_time=batch_time, data_time=data_time,
                           loss=losses, top1=top1, loss_bi=binary_losses, bi_acc=binary_acc,
                           margin_error=margin_error, margin_error_bi=binary_margin_error))
-
         
         acc_class = torch.zeros(1, 10)
         loss_class = torch.zeros(1, 10)
@@ -661,8 +664,8 @@ def validate(val_loader, model, epoch, timeline, dataset, state=None, criterion=
             binary_margin_error.update(margin_error_bi.item(), input.size(0))
 
             # measure auc
-            auc_meter.update(target.detach().to('cpu'), probs.detach().to('cpu'), image_id)
-        
+            auc_meter.update(target.detach(), probs.detach())
+                    
     # measure elapsed time
     batch_time.update(time.time() - end)
     end = time.time()
