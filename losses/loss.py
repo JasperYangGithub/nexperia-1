@@ -12,9 +12,9 @@ class CrossEntropy():
         
         self.soft_labels = torch.zeros(labels.shape[0], num_classes, dtype=torch.float).cuda(non_blocking=True)
         self.soft_labels[torch.arange(labels.shape[0]), labels] = 1
-        self.true_labels = pd.read_csv('/home/kaiyihuang/nexperia/new_data/true_labels.csv', index_col=0)
-        self.clean_labels = pd.read_csv('/home/kaiyihuang/nexperia/clean_labels.csv', index_col=0)
-        self.image_id_index = pd.read_csv('/home/kaiyihuang/nexperia/image_id_index.csv', index_col=0)
+        self.true_labels = pd.read_csv('files/true_labels.csv', index_col=0)
+        self.clean_labels = pd.read_csv('files/clean_labels.csv', index_col=0)
+        self.image_id_index = pd.read_csv('files/image_id_index.csv', index_col=0)
         self.weights = torch.zeros(num_epochs, len(self.true_labels), num_classes, dtype=torch.float).cuda(non_blocking=True)
         self.clean_weights = torch.zeros(num_epochs, len(self.clean_labels), num_classes, dtype=torch.float).cuda(non_blocking=True)
 
@@ -52,9 +52,9 @@ class CrossEntropyWeightedBinary():
         
         self.soft_labels = torch.zeros(labels.shape[0], num_classes, dtype=torch.float).cuda(non_blocking=True)
         self.soft_labels[torch.arange(labels.shape[0]), labels] = 1
-        self.true_labels = pd.read_csv('/home/kaiyihuang/nexperia/new_data/true_labels.csv', index_col=0)
-        self.clean_labels = pd.read_csv('/home/kaiyihuang/nexperia/clean_labels.csv', index_col=0)
-        self.image_id_index = pd.read_csv('/home/kaiyihuang/nexperia/image_id_index.csv', index_col=0)
+        self.true_labels = pd.read_csv('files/true_labels.csv', index_col=0)
+        self.clean_labels = pd.read_csv('files/nexperia/clean_labels.csv', index_col=0)
+        self.image_id_index = pd.read_csv('files/image_id_index.csv', index_col=0)
         self.weights = torch.zeros(num_epochs, len(self.true_labels), num_classes, dtype=torch.float).cuda(non_blocking=True)
         self.clean_weights = torch.zeros(num_epochs, len(self.clean_labels), num_classes, dtype=torch.float).cuda(non_blocking=True)
         
@@ -93,6 +93,44 @@ class CrossEntropyWeightedBinary():
         return torch.mean(loss), torch.mean(loss_bi), margin_error, margin_error_bi
 
 
+class WeightedCrossEntropy():
+    def __init__(self, labels, num_epochs, num_classes=10):
+        self.crit = nn.CrossEntropyLoss(weight = torch.tensor([4, 4, 4, 4, 1, 4, 4, 4, 4, 4], dtype=torch.float).cuda(non_blocking=True))
+        
+        self.soft_labels = torch.zeros(labels.shape[0], num_classes, dtype=torch.float).cuda(non_blocking=True)
+        self.soft_labels[torch.arange(labels.shape[0]), labels] = 1
+        self.true_labels = pd.read_csv('files/true_labels.csv', index_col=0)
+        self.clean_labels = pd.read_csv('files/clean_labels.csv', index_col=0)
+        self.image_id_index = pd.read_csv('files/image_id_index.csv', index_col=0)
+        self.weights = torch.zeros(num_epochs, len(self.true_labels), num_classes, dtype=torch.float).cuda(non_blocking=True)
+        self.clean_weights = torch.zeros(num_epochs, len(self.clean_labels), num_classes, dtype=torch.float).cuda(non_blocking=True)
+
+    def __call__(self, logits, targets, index, epoch, state='train', mod=None):
+        loss =  self.crit(logits, targets)
+        
+        # obtain prob, then update running avg
+        prob = F.softmax(logits.detach(), dim=1)
+        loss_bi = F.binary_cross_entropy(1-prob[:,4], (targets!=4).float())
+        margin_error = torch.mean(prob[np.arange(len(targets)),targets]
+                                  - torch.max(
+                                      prob[
+                                          torch.arange(prob.size(1)).reshape(1,-1).repeat(len(targets),1)
+                                          !=targets.reshape(-1,1).repeat(1,prob.size(1)).cpu()]
+                                      .view(len(targets), -1), 1)[0])
+        margin_error_bi = torch.mean((prob[:,4] * 2 - 1) * torch.sign((targets==4).int() - 0.5))
+
+        if state=='val':
+            index+=31025
+        elif state=='test':
+            index+=34472
+        elif state!='train':
+            raise KeyError("State {} is not supported.".format(state))
+        
+        self.soft_labels[index] = prob
+        
+        return loss, loss_bi, margin_error, margin_error_bi
+    
+
 class SelfAdaptiveTrainingCE():
     def __init__(self, labels, num_epochs, num_classes=10, momentum=0.9, es=40):
         # initialize soft labels to onthot vectors
@@ -103,9 +141,9 @@ class SelfAdaptiveTrainingCE():
         self.momentum = momentum
         self.es = es
         
-        self.true_labels = pd.read_csv('/home/kaiyihuang/nexperia/new_data/true_labels.csv', index_col=0)
-        self.clean_labels = pd.read_csv('/home/kaiyihuang/nexperia/clean_labels.csv', index_col=0)
-        self.image_id_index = pd.read_csv('/home/kaiyihuang/nexperia/image_id_index.csv', index_col=0)
+        self.true_labels = pd.read_csv('files/true_labels.csv', index_col=0)
+        self.clean_labels = pd.read_csv('files/clean_labels.csv', index_col=0)
+        self.image_id_index = pd.read_csv('files/image_id_index.csv', index_col=0)
         self.weights = torch.zeros(num_epochs, len(self.true_labels), num_classes, dtype=torch.float).cuda(non_blocking=True)
         self.clean_weights = torch.zeros(num_epochs, len(self.clean_labels), num_classes, dtype=torch.float).cuda(non_blocking=True)
 
@@ -177,9 +215,9 @@ class SelfAdaptiveTrainingCEMultiWeightedBCE():
         self.ce_momentum = ce_momentum
         self.momentum = momentum
         
-        self.true_labels = pd.read_csv('/home/kaiyihuang/nexperia/new_data/true_labels.csv', index_col=0)
-        self.clean_labels = pd.read_csv('/home/kaiyihuang/nexperia/clean_labels.csv', index_col=0)
-        self.image_id_index = pd.read_csv('/home/kaiyihuang/nexperia/image_id_index.csv', index_col=0)
+        self.true_labels = pd.read_csv('files/true_labels.csv', index_col=0)
+        self.clean_labels = pd.read_csv('files/clean_labels.csv', index_col=0)
+        self.image_id_index = pd.read_csv('files/image_id_index.csv', index_col=0)
         self.weights = torch.zeros(num_epochs, len(self.true_labels), num_classes, dtype=torch.float).cuda(non_blocking=True)
         self.clean_weights = torch.zeros(num_epochs, len(self.clean_labels), num_classes, dtype=torch.float).cuda(non_blocking=True)
 
@@ -246,9 +284,9 @@ class SelfAdaptiveTrainingWeightedBCE():
         self.el = torch.tensor([el1, el2, el3, el4, el5, el6, el7, el8, el9, el10]).cuda(non_blocking=True)
         self.ce_momentum = ce_momentum
         
-        self.true_labels = pd.read_csv('/home/kaiyihuang/nexperia/new_data/true_labels.csv', index_col=0)
-        self.clean_labels = pd.read_csv('/home/kaiyihuang/nexperia/clean_labels.csv', index_col=0)
-        self.image_id_index = pd.read_csv('/home/kaiyihuang/nexperia/image_id_index.csv', index_col=0)
+        self.true_labels = pd.read_csv('files/true_labels.csv', index_col=0)
+        self.clean_labels = pd.read_csv('files/clean_labels.csv', index_col=0)
+        self.image_id_index = pd.read_csv('files/image_id_index.csv', index_col=0)
         self.weights = torch.zeros(num_epochs, len(self.true_labels), num_classes, dtype=torch.float).cuda(non_blocking=True)
         self.clean_weights = torch.zeros(num_epochs, len(self.clean_labels), num_classes, dtype=torch.float).cuda(non_blocking=True)
 

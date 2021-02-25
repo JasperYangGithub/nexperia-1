@@ -65,16 +65,14 @@ class AUCMeter(object):
     def reset(self):
         self.y_true = []
         self.y_score = []
-        self.image_ids = []
         
-    def update(self, y_true, y_score, image_id):
+    def update(self, y_true, y_score):
         self.y_true.append(y_true)
         self.y_score.append(y_score)
-        self.image_ids.append(image_id)
         
     def calculate(self):
-        y_true = torch.cat(self.y_true)
-        y_score = torch.cat(self.y_score)
+        y_true = torch.cat(self.y_true).cpu()
+        y_score = torch.cat(self.y_score).cpu()
         auc = metrics.roc_auc_score(y_true!=4, 1.-y_score[:,4])
         fpr, tpr, thresholds = metrics.roc_curve(y_true!=4, 1.-y_score[:,4])
         fpr_991 = fpr[np.where(tpr>=0.991)[0][0]]

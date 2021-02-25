@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from .loss import CrossEntropy, CrossEntropyWeightedBinary, SelfAdaptiveTrainingCE, SelfAdaptiveTrainingCEMultiWeightedBCE, SelfAdaptiveTrainingWeightedBCE, SelfAdaptiveTrainingSCE
+from .loss import CrossEntropy, CrossEntropyWeightedBinary, SelfAdaptiveTrainingCE, SelfAdaptiveTrainingCEMultiWeightedBCE, SelfAdaptiveTrainingWeightedBCE, SelfAdaptiveTrainingSCE, WeightedCrossEntropy
 
 from .trades import TRADES, TRADES_SAT
 
@@ -8,6 +8,9 @@ from .trades import TRADES, TRADES_SAT
 def get_loss(args, labels=None, num_classes=10):
     if args.loss == 'ce':
         criterion = CrossEntropy(labels, num_classes=num_classes, num_epochs=args.epochs)
+        
+    elif args.loss == 'wce':
+        criterion = WeightedCrossEntropy(labels, num_classes=num_classes, num_epochs=args.epochs)
     
     elif args.loss == 'sat':
         criterion = SelfAdaptiveTrainingCE(labels, num_classes=num_classes, momentum=args.sat_alpha, es=args.sat_es, num_epochs=args.epochs)
